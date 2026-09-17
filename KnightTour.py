@@ -288,8 +288,8 @@ def visualize_with_pygame(knight, fitness, generation, params, title="Knight's T
         result_title = font_medium.render("Results", True, BLUE)
         screen.blit(result_title, (panel_x + 10, y_offset + 10))
         
-        txt_fitness = font.render(f"Fitness : {fitness}/64", True, BLACK)
-        txt_gen = font.render(f"Génération : {generation}", True, BLACK)
+        txt_fitness = font.render(f"Fitness : {fitness}", True, BLACK)
+        txt_gen = font.render(f"Generation : {generation}", True, BLACK)
         
         screen.blit(txt_fitness, (panel_x + 10, y_offset + 45))
         screen.blit(txt_gen, (panel_x + 10, y_offset + 70))
