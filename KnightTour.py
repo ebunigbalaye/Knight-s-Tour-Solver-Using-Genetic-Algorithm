@@ -1,20 +1,20 @@
 import random
 import pygame
-import sys
+
 
 class Chromosome:
-    LENGTH = 63
+    LENGTH = 63 
 
     def __init__(self, genes=None):
         if genes is None:
-            self.genes = [random.randint(1, 8) for _ in range(self.LENGTH)]
+            self.genes = [random.randint(1, 8) for _ in range(self.LENGTH)] 
         else:
             if len(genes) != self.LENGTH:
                 raise ValueError(f"Genes length must be {self.LENGTH}")
             self.genes = genes[:]
 
     def crossover(self, partner, crossover_prob=1.0):
-        if random.random() <= crossover_prob:
+        if random.random() <= crossover_prob: 
             crossover_point = random.randint(1, self.LENGTH - 1)
             offspring1_genes = self.genes[:crossover_point] + partner.genes[crossover_point:]
             offspring2_genes = partner.genes[:crossover_point] + self.genes[crossover_point:]
@@ -22,7 +22,7 @@ class Chromosome:
         else:
             return Chromosome(self.genes), Chromosome(partner.genes)
 
-    def mutation(self, mutation_prob=0.01):
+    def mutation(self, mutation_prob=0.01): 
         for i in range(len(self.genes)):
             if random.random() <= mutation_prob:
                 self.genes[i] = random.randint(1, 8)
@@ -30,6 +30,7 @@ class Chromosome:
 
 # Knight
 class Knight:
+
     MOVES = {
         1: (1, -2),
         2: (2, -1),
@@ -50,31 +51,34 @@ class Knight:
             else:
                 self.chromosome = Chromosome(chromosome)
 
-        self.position = (0, 0)
+        self.position = (random.randint(1,8),random.randint(1,8))
         self.path = [self.position]
         self.fitness = 0
+        self.origin = (0,0)
 
     def move_forward(self, direction):
         x, y = self.position
         dx, dy = Knight.MOVES.get(direction, (0, 0))
         new_pos = (x + dx, y + dy)
-        self.position = new_pos
+        self.position = new_pos 
         self.path.append(new_pos)
 
-    def move_backward(self, direction):
+    def move_backward(self):
         if len(self.path) > 1:
             self.path.pop()
             self.position = self.path[-1]
+
         else:
-            self.position = (0, 0)
+            self.position = self.origin
             self.path = [self.position]
 
     def check_moves(self):
-        self.position = (0, 0)
+        self.position = self.origin
         self.path = [self.position]
         cycle_forward = random.choice([True, False])
 
         for gene in self.chromosome.genes:
+
             original_move = gene
             move_found = False
 
@@ -84,8 +88,8 @@ class Knight:
             if 0 <= x < 8 and 0 <= y < 8 and self.position not in self.path[:-1]:
                 move_found = True
             else:
-                self.move_backward(original_move)
-
+               
+                self.move_backward()
                 for i in range(1, 8):
                     if cycle_forward:
                         new_move = ((original_move + i - 1) % 8) + 1
@@ -94,30 +98,32 @@ class Knight:
 
                     self.move_forward(new_move)
                     x, y = self.position
-
                     if 0 <= x < 8 and 0 <= y < 8 and self.position not in self.path[:-1]:
                         move_found = True
                         break
                     else:
-                        self.move_backward(new_move)
+                        self.move_backward()
+
 
                 if not move_found:
                     self.move_forward(original_move)
 
     def evaluate_fitness(self):
-        seen = set()
+        seen = []
         fitness = 0
 
-        for pos in self.path:
-            x, y = pos
-            if not (0 <= x < 8 and 0 <= y < 8):
+        for position in self.path:
+            x, y = position
+            if not (0 <= x < 8 and 0 <= y < 8) or position in seen:
                 break
-            if pos in seen:
-                break
-            seen.add(pos)
+            seen.append(position)
             fitness += 1
-            if fitness >= 64:
-                break
+        if fitness == 64:
+            last = self.path[-1]
+            first = self.path[0]
+            dx, dy = abs(last[0]-first[0]), abs(last[1]-first[1])
+            if (dx, dy) in self.MOVES.values():
+                fitness += 10 
 
         self.fitness = fitness
         return self.fitness
@@ -208,6 +214,15 @@ def visualize_with_pygame(knight, fitness, generation, params, title="Knight's T
     path = knight.path
     display_positions = [(x, y) for (x, y) in path if 0 <= x < 8 and 0 <= y < 8]
 
+
+    is_closed = False
+    if len(display_positions) == 64:
+            first = display_positions[0]
+            last = display_positions[63]
+            dx, dy = abs(last[0] - first[0]), abs(last[1] - first[1])
+            is_closed = (dx, dy) in Knight.MOVES.values()
+
+
     def center_of(cell):
         x, y = cell
         return x * square_px + square_px // 2, y * square_px + square_px // 2
@@ -255,6 +270,10 @@ def visualize_with_pygame(knight, fitness, generation, params, title="Knight's T
         if len(points) >= 2:
             pygame.draw.lines(screen, RED, False, points, 3)
 
+        # draw the closing edge once the full tour has finished animating
+        if is_closed and step == len(display_positions):
+            pygame.draw.line(screen, BLUE, points[-1], points[0], 3)
+
         pygame.draw.rect(screen, LIGHT_GREY, (board_px, 0, SIDE_PANEL_WIDTH, window_height))
 
         panel_x = board_px + 20
@@ -266,7 +285,7 @@ def visualize_with_pygame(knight, fitness, generation, params, title="Knight's T
 
         pygame.draw.rect(screen, WHITE, (panel_x, y_offset, 260, 100), border_radius=10)
         
-        result_title = font_medium.render("Résultats", True, BLUE)
+        result_title = font_medium.render("Results", True, BLUE)
         screen.blit(result_title, (panel_x + 10, y_offset + 10))
         
         txt_fitness = font.render(f"Fitness : {fitness}/64", True, BLACK)
@@ -279,7 +298,7 @@ def visualize_with_pygame(knight, fitness, generation, params, title="Knight's T
 
         pygame.draw.rect(screen, WHITE, (panel_x, y_offset, 260, 220), border_radius=10)
         
-        params_title = font_medium.render("Paramètres", True, BLUE)
+        params_title = font_medium.render("Parameters", True, BLUE)
         screen.blit(params_title, (panel_x + 10, y_offset + 10))
         
         param_y = y_offset + 45
@@ -337,14 +356,14 @@ def run_genetic_and_visualize(
     )
 
     
-    print("Algorithme Génétique Knight's Tour")
+    print("Genetic Algorithm Knight's Tour")
   
     print(f"Population size  : {population_size}")
     print(f"Mutation probability  : {mutation_prob}")
     print(f"Crossover probability : {crossover_prob}")
     print(f"Tournament size : {tournament_size}")
     print(f"Max generations : {max_generations}")
-    
+
     print()
 
     best_solution = None
@@ -353,20 +372,20 @@ def run_genetic_and_visualize(
         maxFit, bestSolution = population.evaluate()
         best_solution = bestSolution
 
-        if maxFit == 64:
-            print("\nsolution trouve")
+        if maxFit > 64:
+            print("\nSolution Found")
             break
 
         if population.generation >= max_generations:
-            print("\nNombre max de générations atteint.")
+            print("\nMaximum Number of Generations Reached")
             break
 
         population.create_new_generation()
 
     print()
-    print(f"Fitness finale: {best_solution.fitness}/64")
-    print(f"Longueur path: {len(best_solution.path)}")
-    print(f"Genes (20 premiers): {best_solution.chromosome.genes[:20]}")
+    print(f"Final Fitness: {best_solution.fitness}")
+    print(f"Path Length: {len(best_solution.path)}")
+    print(f"First 20 Genes of the best solution: {best_solution.chromosome.genes[:20]}")
     print()
 
     params = {
@@ -383,10 +402,10 @@ def run_genetic_and_visualize(
 if __name__ == "__main__":
     run_genetic_and_visualize(
         population_size=50,
-        mutation_prob=0.001,
-        tournament_size=3,
-        crossover_prob=1.0,
-        max_generations=1000,
+        mutation_prob=0.1,
+        tournament_size=5,
+        crossover_prob=0.8,
+        max_generations=1500,
         animate=True
     )
 
